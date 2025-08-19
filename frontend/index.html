@@ -1,0 +1,162 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Mini Leave Management System</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#0b1020;--card:#111733;--muted:#c7c9d3;--pri:#6ee7b7;--red:#f87171}
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui;background:linear-gradient(120deg,#070b19,#0b1020)}
+    .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
+    .hero{display:flex;justify-content:space-between;align-items:center;color:#fff;margin-bottom:20px}
+    .hero h1{margin:0;font-size:28px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .card{background:var(--card);color:#e7e9f3;border:1px solid #1d2547;border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    input,select,button{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #2a3567;background:#0f1430;color:#e7e9f3}
+    button{background:linear-gradient(135deg,#34d399,#10b981);border:0;color:#062016;font-weight:700;cursor:pointer}
+    table{width:100%;border-collapse:collapse;margin-top:10px;color:#e7e9f3}
+    th,td{border-bottom:1px dashed #2a3567;padding:10px;text-align:left}
+    .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
+    .pending{background:#374151}
+    .approved{background:#065f46}
+    .rejected{background:#7f1d1d}
+    .muted{color:var(--muted);font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <h1>🌿 Mini Leave Management System</h1>
+      <div class="muted" id="backendInfo">Backend: not connected</div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Add Employee</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <input id="eName" placeholder="Name"/>
+          <input id="eEmail" placeholder="Email"/>
+          <input id="eDept" placeholder="Department"/>
+          <input id="eJoin" type="date" placeholder="Joining Date"/>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <button id="btnAdd">Add</button>
+          <button id="btnLoad">Refresh List</button>
+        </div>
+        <div id="empMsg" class="muted" style="margin-top:8px"></div>
+        <table id="empTable"></table>
+      </div>
+
+      <div class="card">
+        <h3>Apply Leave</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <select id="lEmp"></select>
+          <select id="lType">
+            <option value="casual">Casual</option>
+            <option value="sick">Sick</option>
+            <option value="earned">Earned</option>
+          </select>
+          <input id="lStart" type="date"/>
+          <input id="lEnd" type="date"/>
+        </div>
+        <input id="lReason" placeholder="Reason" style="margin-top:10px"/>
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <button id="btnApply">Apply</button>
+          <button id="btnLoadLeaves">Refresh Leaves</button>
+        </div>
+        <div id="leaveMsg" class="muted" style="margin-top:8px"></div>
+        <table id="leaveTable"></table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const backendBase = localStorage.getItem("lms_port") || "";
+    let base = backendBase || "http://localhost:4000";
+    fetch(base).then(()=>setInfo(base)).catch(()=>{
+      base = "http://localhost:4001";
+      fetch(base).then(()=>setInfo(base)).catch(()=>{
+        base = "http://localhost:4002";
+        fetch(base).then(()=>setInfo(base)).catch(()=>{
+          document.getElementById("backendInfo").innerText = "Backend: not reachable";
+        });
+      });
+    });
+    function setInfo(b){ document.getElementById("backendInfo").innerText = "Backend: "+b; localStorage.setItem("lms_port", b); }
+
+    const eName = document.getElementById("eName");
+    const eEmail = document.getElementById("eEmail");
+    const eDept = document.getElementById("eDept");
+    const eJoin = document.getElementById("eJoin");
+    const empMsg = document.getElementById("empMsg");
+    const empTable = document.getElementById("empTable");
+    const lEmp = document.getElementById("lEmp");
+    const lType = document.getElementById("lType");
+    const lStart = document.getElementById("lStart");
+    const lEnd = document.getElementById("lEnd");
+    const lReason = document.getElementById("lReason");
+    const leaveMsg = document.getElementById("leaveMsg");
+    const leaveTable = document.getElementById("leaveTable");
+
+    document.getElementById("btnAdd").onclick = async () => {
+      empMsg.innerText = "";
+      const r = await fetch(base + "/employees", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ name:eName.value, email:eEmail.value, department:eDept.value, joiningDate:eJoin.value }) });
+      const d = await r.json();
+      empMsg.innerText = d.error ? "❌ " + d.error : "✅ Employee added";
+      loadEmployees();
+    };
+
+    document.getElementById("btnLoad").onclick = () => loadEmployees();
+    document.getElementById("btnApply").onclick = async () => {
+      leaveMsg.innerText = "";
+      const r = await fetch(base + "/leaves", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ employeeId: Number(lEmp.value), type:lType.value, startDate:lStart.value, endDate:lEnd.value, reason:lReason.value }) });
+      const d = await r.json();
+      leaveMsg.innerText = d.error ? "❌ " + d.error : "✅ Leave submitted";
+      loadLeaves();
+    };
+    document.getElementById("btnLoadLeaves").onclick = () => loadLeaves();
+
+    async function loadEmployees() {
+      const r = await fetch(base + "/employees");
+      const list = await r.json();
+      lEmp.innerHTML = list.map(e => `<option value="${e.id}">${e.name} (${e.department})</option>`).join("");
+      empTable.innerHTML = "<thead><tr><th>Name</th><th>Email</th><th>Dept</th><th>Join</th><th>Balance</th></tr></thead>" +
+        "<tbody>" + list.map(e => `<tr><td>${e.name}</td><td>${e.email}</td><td>${e.department}</td><td>${new Date(e.joiningDate).toLocaleDateString()}</td><td>C:${e.leaveBalance.casual} S:${e.leaveBalance.sick} E:${e.leaveBalance.earned}</td></tr>`).join("") + "</tbody>";
+    }
+
+    async function loadLeaves() {
+      const r = await fetch(base + "/leaves");
+      const list = await r.json();
+      leaveTable.innerHTML = "<thead><tr><th>Ref</th><th>Emp</th><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Status</th><th>Action</th></tr></thead>" +
+        "<tbody>" + list.map(l => `<tr>
+          <td>${l.ref || "-"}</td>
+          <td>${l.employeeId}</td>
+          <td>${l.type}</td>
+          <td>${new Date(l.startDate).toLocaleDateString()}</td>
+          <td>${new Date(l.endDate).toLocaleDateString()}</td>
+          <td>${l.days}</td>
+          <td><span class="tag ${l.status}">${l.status}</span></td>
+          <td>${l.status==="pending" ? `<button onclick="approve(${l.id})">Approve</button> <button style="background:linear-gradient(135deg,#fca5a5,#ef4444)" onclick="rejectL(${l.id})">Reject</button>` : "-"}</td>
+        </tr>`).join("") + "</tbody>";
+    }
+
+    window.approve = async (id) => {
+      const r = await fetch(base + "/leaves/" + id + "/approve", { method:"POST" });
+      const d = await r.json();
+      leaveMsg.innerText = d.error ? "❌ " + d.error : "✅ Leave approved";
+      loadEmployees(); loadLeaves();
+    };
+
+    window.rejectL = async (id) => {
+      const r = await fetch(base + "/leaves/" + id + "/reject", { method:"POST" });
+      const d = await r.json();
+      leaveMsg.innerText = d.error ? "❌ " + d.error : "✅ Leave rejected";
+      loadLeaves();
+    };
+
+    loadEmployees(); loadLeaves();
+  </script>
+</body>
+</html>

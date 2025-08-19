@@ -1,0 +1,21 @@
+{
+  "employees": [
+    {
+      "id": 1,
+      "name": "Vaibhav",
+      "email": "hash@gmail.com",
+      "department": "IT",
+      "joiningDate": "3663-03-07T00:00:00.000Z",
+      "leaveBalance": {
+        "casual": 12,
+        "sick": 8,
+        "earned": 0
+      }
+    }
+  ],
+  "leaves": [],
+  "seq": {
+    "employeeId": 2,
+    "leaveId": 1
+  }
+}
